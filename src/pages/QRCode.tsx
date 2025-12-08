@@ -23,7 +23,7 @@ export default function QRCode() {
     if (canvas) {
       const url = canvas.toDataURL('image/png');
       const link = document.createElement('a');
-      link.download = `ice-profile-${profile.name || 'patient'}.png`;
+      link.download = `quickaid-profile-${profile.name || 'patient'}.png`;
       link.href = url;
       link.click();
       toast.success('QR code downloaded');

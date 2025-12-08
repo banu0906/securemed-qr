@@ -96,7 +96,7 @@ export default function EmergencyProfile() {
             </div>
             <div>
               <h1 className="font-bold text-primary-foreground">Emergency Medical Profile</h1>
-              <p className="text-xs text-primary-foreground/80">ICE - In Case of Emergency</p>
+              <p className="text-xs text-primary-foreground/80">QuickAid - In Case of Emergency</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -293,9 +293,9 @@ export default function EmergencyProfile() {
           </Card>
         )}
 
-        {/* Footer */}
         <div className="text-center py-4 text-xs text-muted-foreground">
-          <p>This emergency medical profile was created with ICE Profile</p>
+          <p>This emergency medical profile was created with QuickAid</p>
+          <p className="mt-1">Last updated: {new Date(profile.updatedAt).toLocaleDateString()}</p>
           <p className="mt-1">Last updated: {new Date(profile.updatedAt).toLocaleDateString()}</p>
         </div>
       </main>
