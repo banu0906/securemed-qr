@@ -20,7 +20,7 @@ export function Header() {
           <div className="p-2 rounded-lg medical-gradient shadow-medical group-hover:scale-105 transition-transform duration-200">
             <HeartPulseIcon className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-lg text-foreground">ICE Profile</span>
+          <span className="font-semibold text-lg text-foreground">QuickAid</span>
         </Link>
 
         <nav className="flex items-center gap-1">

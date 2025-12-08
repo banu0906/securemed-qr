@@ -56,7 +56,7 @@ export default function Index() {
       <section className="py-20 bg-muted/30">
         <div className="container">
           <h2 className="text-3xl font-bold text-center text-foreground mb-12">
-            Why Choose ICE Profile?
+            Why Choose QuickAid?
           </h2>
 
           <div className="grid md:grid-cols-3 gap-6">
@@ -170,10 +170,10 @@ export default function Index() {
         <div className="container flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <HeartPulseIcon className="h-5 w-5 text-primary" />
-            <span className="font-semibold text-foreground">ICE Profile</span>
+            <span className="font-semibold text-foreground">QuickAid</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} ICE Profile. Emergency medical information at your fingertips.
+            © {new Date().getFullYear()} QuickAid. Emergency medical information at your fingertips.
           </p>
         </div>
       </footer>

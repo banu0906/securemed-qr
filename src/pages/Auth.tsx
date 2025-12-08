@@ -68,7 +68,7 @@ export default function Auth() {
           <HeartPulseIcon className="h-8 w-8 text-primary-foreground" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-foreground">ICE Profile</h1>
+          <h1 className="text-2xl font-bold text-foreground">QuickAid</h1>
           <p className="text-sm text-muted-foreground">Emergency Medical Info</p>
         </div>
       </div>
