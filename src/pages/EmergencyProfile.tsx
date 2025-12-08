@@ -31,6 +31,18 @@ export default function EmergencyProfile() {
   useEffect(() => {
     // Search for profile by QR code ID
     const findProfile = () => {
+      // First check the current user's profile (ice_profile)
+      const currentProfile = localStorage.getItem('ice_profile');
+      if (currentProfile) {
+        const profileData = JSON.parse(currentProfile);
+        if (profileData.qrCodeId === qrCodeId) {
+          setProfile(profileData);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Then search all user profiles
       const users = JSON.parse(localStorage.getItem('ice_users') || '{}');
       
       for (const email of Object.keys(users)) {
@@ -295,7 +307,6 @@ export default function EmergencyProfile() {
 
         <div className="text-center py-4 text-xs text-muted-foreground">
           <p>This emergency medical profile was created with QuickAid</p>
-          <p className="mt-1">Last updated: {new Date(profile.updatedAt).toLocaleDateString()}</p>
           <p className="mt-1">Last updated: {new Date(profile.updatedAt).toLocaleDateString()}</p>
         </div>
       </main>
