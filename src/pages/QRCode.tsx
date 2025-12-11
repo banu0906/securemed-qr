@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/Header';
@@ -7,10 +7,11 @@ import { QRCodeDisplay } from '@/components/qr/QRCodeDisplay';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { HeartPulseIcon, ShieldCheckIcon } from '@/components/icons/MedicalIcons';
-import { Download, Share2, Maximize2, ArrowLeft, Copy } from 'lucide-react';
+import { Download, Share2, Eye, ArrowLeft, Copy } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 
 export default function QRCode() {
+  const navigate = useNavigate();
   const { profile, user } = useAuth();
   const qrRef = useRef<HTMLDivElement>(null);
 
@@ -104,10 +105,8 @@ export default function QRCode() {
     // Sync profile to all storage locations before opening preview
     syncProfileToStorage(profile);
     
-    // Small delay to ensure localStorage is written
-    setTimeout(() => {
-      window.open(`/emergency/${profile.qrCodeId}`, '_blank');
-    }, 100);
+    // Navigate to the emergency profile page (same tab for reliable localStorage access)
+    navigate(`/emergency/${profile.qrCodeId}`);
   };
 
   return (
@@ -211,7 +210,7 @@ export default function QRCode() {
             </CardContent>
           </Card>
 
-          {/* Full Screen Button */}
+          {/* Preview Button */}
           <Button 
             variant="medical" 
             size="lg" 
@@ -219,7 +218,7 @@ export default function QRCode() {
             style={{ animationDelay: '250ms' }} 
             onClick={handlePreview}
           >
-            <Maximize2 className="h-4 w-4 mr-2" />
+            <Eye className="h-4 w-4 mr-2" />
             Preview Emergency Profile
           </Button>
         </div>
