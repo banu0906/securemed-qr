@@ -14,6 +14,16 @@ export default function QRCode() {
   const { profile } = useAuth();
   const qrRef = useRef<HTMLDivElement>(null);
 
+  // Sync profile to localStorage whenever QRCode page loads
+  React.useEffect(() => {
+    if (profile) {
+      const profilesByQr = JSON.parse(localStorage.getItem('ice_profiles_by_qr') || '{}');
+      profilesByQr[profile.qrCodeId] = profile;
+      localStorage.setItem('ice_profiles_by_qr', JSON.stringify(profilesByQr));
+      localStorage.setItem('ice_profile', JSON.stringify(profile));
+    }
+  }, [profile]);
+
   if (!profile) return null;
 
   const profileUrl = `${window.location.origin}/emergency/${profile.qrCodeId}`;
@@ -49,6 +59,15 @@ export default function QRCode() {
   const handleCopyLink = () => {
     navigator.clipboard.writeText(profileUrl);
     toast.success('Link copied to clipboard');
+  };
+
+  const handlePreview = () => {
+    // Ensure profile is synced before opening preview
+    const profilesByQr = JSON.parse(localStorage.getItem('ice_profiles_by_qr') || '{}');
+    profilesByQr[profile.qrCodeId] = profile;
+    localStorage.setItem('ice_profiles_by_qr', JSON.stringify(profilesByQr));
+    localStorage.setItem('ice_profile', JSON.stringify(profile));
+    window.open(`/emergency/${profile.qrCodeId}`, '_blank');
   };
 
   return (
@@ -153,11 +172,15 @@ export default function QRCode() {
           </Card>
 
           {/* Full Screen Button */}
-          <Button variant="medical" size="lg" className="w-full animate-slide-up" style={{ animationDelay: '250ms' }} asChild>
-            <Link to={`/emergency/${profile.qrCodeId}`} target="_blank">
-              <Maximize2 className="h-4 w-4 mr-2" />
-              Preview Emergency Profile
-            </Link>
+          <Button 
+            variant="medical" 
+            size="lg" 
+            className="w-full animate-slide-up" 
+            style={{ animationDelay: '250ms' }} 
+            onClick={handlePreview}
+          >
+            <Maximize2 className="h-4 w-4 mr-2" />
+            Preview Emergency Profile
           </Button>
         </div>
       </main>
