@@ -30,22 +30,31 @@ export default function EmergencyProfile() {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    // Search for profile by QR code ID
     const findProfile = () => {
-      // First check the current user's profile (ice_profile)
+      // First, try direct lookup by qrCodeId (most reliable)
+      const profilesByQr = JSON.parse(localStorage.getItem('ice_profiles_by_qr') || '{}');
+      if (profilesByQr[qrCodeId!]) {
+        setProfile(profilesByQr[qrCodeId!]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Fallback: check the current user's profile
       const currentProfile = localStorage.getItem('ice_profile');
       if (currentProfile) {
         const profileData = JSON.parse(currentProfile);
         if (profileData.qrCodeId === qrCodeId) {
+          // Also save to qrCodeId mapping for future lookups
+          profilesByQr[qrCodeId!] = profileData;
+          localStorage.setItem('ice_profiles_by_qr', JSON.stringify(profilesByQr));
           setProfile(profileData);
           setIsLoading(false);
           return;
         }
       }
 
-      // Then search all user profiles
+      // Fallback: search all user profiles
       const users = JSON.parse(localStorage.getItem('ice_users') || '{}');
-      
       for (const email of Object.keys(users)) {
         const userId = users[email].id;
         const savedProfile = localStorage.getItem(`ice_profile_${userId}`);
@@ -53,6 +62,9 @@ export default function EmergencyProfile() {
         if (savedProfile) {
           const profileData = JSON.parse(savedProfile);
           if (profileData.qrCodeId === qrCodeId) {
+            // Save to qrCodeId mapping for future lookups
+            profilesByQr[qrCodeId!] = profileData;
+            localStorage.setItem('ice_profiles_by_qr', JSON.stringify(profilesByQr));
             setProfile(profileData);
             setIsLoading(false);
             return;
