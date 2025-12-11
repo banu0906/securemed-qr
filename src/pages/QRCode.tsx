@@ -60,7 +60,7 @@ export default function QRCode() {
     );
   }
 
-  const profileUrl = `${window.location.origin}/emergency/${profile.qrCodeId}`;
+  const profileUrl = `http://localhost:8080/emergency/${profile.qrCodeId}`;
 
   const handleDownload = () => {
     const canvas = document.querySelector('#qr-download canvas') as HTMLCanvasElement;
