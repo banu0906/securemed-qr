@@ -11,20 +11,53 @@ import { Download, Share2, Maximize2, ArrowLeft, Copy } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 
 export default function QRCode() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const qrRef = useRef<HTMLDivElement>(null);
 
-  // Sync profile to localStorage whenever QRCode page loads
+  // Sync profile to localStorage whenever QRCode page loads or profile changes
   React.useEffect(() => {
-    if (profile) {
-      const profilesByQr = JSON.parse(localStorage.getItem('ice_profiles_by_qr') || '{}');
-      profilesByQr[profile.qrCodeId] = profile;
-      localStorage.setItem('ice_profiles_by_qr', JSON.stringify(profilesByQr));
-      localStorage.setItem('ice_profile', JSON.stringify(profile));
+    if (profile && profile.qrCodeId) {
+      syncProfileToStorage(profile);
     }
   }, [profile]);
 
-  if (!profile) return null;
+  // Helper function to sync profile to all storage locations
+  const syncProfileToStorage = (profileData: typeof profile) => {
+    if (!profileData || !profileData.qrCodeId) return;
+    
+    // Sync to qrCodeId mapping
+    const profilesByQr = JSON.parse(localStorage.getItem('ice_profiles_by_qr') || '{}');
+    profilesByQr[profileData.qrCodeId] = profileData;
+    localStorage.setItem('ice_profiles_by_qr', JSON.stringify(profilesByQr));
+    
+    // Sync to current profile
+    localStorage.setItem('ice_profile', JSON.stringify(profileData));
+    
+    // Sync to user-specific profile if user exists
+    if (user?.id) {
+      localStorage.setItem(`ice_profile_${user.id}`, JSON.stringify(profileData));
+    }
+  };
+
+  // Show loading or redirect if no profile
+  if (!profile || !profile.qrCodeId) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md w-full">
+          <CardContent className="py-8 text-center">
+            <HeartPulseIcon className="h-12 w-12 text-primary mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-foreground mb-2">Profile Not Ready</h2>
+            <p className="text-muted-foreground mb-4">
+              Please complete your profile before generating a QR code.
+            </p>
+            <Button asChild>
+              <Link to="/profile">Complete Profile</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const profileUrl = `${window.location.origin}/emergency/${profile.qrCodeId}`;
 
@@ -62,12 +95,19 @@ export default function QRCode() {
   };
 
   const handlePreview = () => {
-    // Ensure profile is synced before opening preview
-    const profilesByQr = JSON.parse(localStorage.getItem('ice_profiles_by_qr') || '{}');
-    profilesByQr[profile.qrCodeId] = profile;
-    localStorage.setItem('ice_profiles_by_qr', JSON.stringify(profilesByQr));
-    localStorage.setItem('ice_profile', JSON.stringify(profile));
-    window.open(`/emergency/${profile.qrCodeId}`, '_blank');
+    // Validate profile exists and has valid qrCodeId
+    if (!profile || !profile.qrCodeId) {
+      toast.error('Please complete your profile before previewing.');
+      return;
+    }
+    
+    // Sync profile to all storage locations before opening preview
+    syncProfileToStorage(profile);
+    
+    // Small delay to ensure localStorage is written
+    setTimeout(() => {
+      window.open(`/emergency/${profile.qrCodeId}`, '_blank');
+    }, 100);
   };
 
   return (

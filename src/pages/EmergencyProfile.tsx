@@ -31,54 +31,107 @@ export default function EmergencyProfile() {
 
   useEffect(() => {
     const findProfile = () => {
-      // First, try direct lookup by qrCodeId (most reliable)
-      const profilesByQr = JSON.parse(localStorage.getItem('ice_profiles_by_qr') || '{}');
-      if (profilesByQr[qrCodeId!]) {
-        setProfile(profilesByQr[qrCodeId!]);
+      if (!qrCodeId) {
+        setNotFound(true);
         setIsLoading(false);
         return;
       }
 
-      // Fallback: check the current user's profile
-      const currentProfile = localStorage.getItem('ice_profile');
-      if (currentProfile) {
-        const profileData = JSON.parse(currentProfile);
-        if (profileData.qrCodeId === qrCodeId) {
-          // Also save to qrCodeId mapping for future lookups
-          profilesByQr[qrCodeId!] = profileData;
-          localStorage.setItem('ice_profiles_by_qr', JSON.stringify(profilesByQr));
-          setProfile(profileData);
+      // Strategy 1: Direct lookup by qrCodeId (most reliable)
+      try {
+        const profilesByQr = JSON.parse(localStorage.getItem('ice_profiles_by_qr') || '{}');
+        if (profilesByQr[qrCodeId]) {
+          console.log('Found profile via qrCodeId mapping');
+          setProfile(profilesByQr[qrCodeId]);
           setIsLoading(false);
           return;
         }
+      } catch (e) {
+        console.error('Error reading ice_profiles_by_qr:', e);
       }
 
-      // Fallback: search all user profiles
-      const users = JSON.parse(localStorage.getItem('ice_users') || '{}');
-      for (const email of Object.keys(users)) {
-        const userId = users[email].id;
-        const savedProfile = localStorage.getItem(`ice_profile_${userId}`);
-        
-        if (savedProfile) {
-          const profileData = JSON.parse(savedProfile);
-          if (profileData.qrCodeId === qrCodeId) {
+      // Strategy 2: Check the current user's profile
+      try {
+        const currentProfile = localStorage.getItem('ice_profile');
+        if (currentProfile) {
+          const profileData = JSON.parse(currentProfile);
+          if (profileData && profileData.qrCodeId === qrCodeId) {
+            console.log('Found profile via ice_profile');
             // Save to qrCodeId mapping for future lookups
-            profilesByQr[qrCodeId!] = profileData;
+            const profilesByQr = JSON.parse(localStorage.getItem('ice_profiles_by_qr') || '{}');
+            profilesByQr[qrCodeId] = profileData;
             localStorage.setItem('ice_profiles_by_qr', JSON.stringify(profilesByQr));
             setProfile(profileData);
             setIsLoading(false);
             return;
           }
         }
+      } catch (e) {
+        console.error('Error reading ice_profile:', e);
+      }
+
+      // Strategy 3: Search all user profiles by userId
+      try {
+        const users = JSON.parse(localStorage.getItem('ice_users') || '{}');
+        for (const email of Object.keys(users)) {
+          const userId = users[email]?.id;
+          if (!userId) continue;
+          
+          const savedProfile = localStorage.getItem(`ice_profile_${userId}`);
+          if (savedProfile) {
+            const profileData = JSON.parse(savedProfile);
+            if (profileData && profileData.qrCodeId === qrCodeId) {
+              console.log('Found profile via user profile');
+              // Save to qrCodeId mapping for future lookups
+              const profilesByQr = JSON.parse(localStorage.getItem('ice_profiles_by_qr') || '{}');
+              profilesByQr[qrCodeId] = profileData;
+              localStorage.setItem('ice_profiles_by_qr', JSON.stringify(profilesByQr));
+              setProfile(profileData);
+              setIsLoading(false);
+              return;
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Error searching user profiles:', e);
+      }
+
+      // Strategy 4: Search all localStorage keys for any profile with matching qrCodeId
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('ice_profile') || key.includes('profile'))) {
+            const data = localStorage.getItem(key);
+            if (data) {
+              const profileData = JSON.parse(data);
+              if (profileData && profileData.qrCodeId === qrCodeId) {
+                console.log('Found profile via localStorage scan:', key);
+                // Save to qrCodeId mapping for future lookups
+                const profilesByQr = JSON.parse(localStorage.getItem('ice_profiles_by_qr') || '{}');
+                profilesByQr[qrCodeId] = profileData;
+                localStorage.setItem('ice_profiles_by_qr', JSON.stringify(profilesByQr));
+                setProfile(profileData);
+                setIsLoading(false);
+                return;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Error scanning localStorage:', e);
       }
       
+      console.log('Profile not found for qrCodeId:', qrCodeId);
       setNotFound(true);
       setIsLoading(false);
     };
 
-    if (qrCodeId) {
+    // Small delay to ensure localStorage is populated (especially when opening in new tab)
+    const timer = setTimeout(() => {
       findProfile();
-    }
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [qrCodeId]);
 
   if (isLoading) {
