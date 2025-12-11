@@ -93,6 +93,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(profileObj);
     localStorage.setItem('ice_user', JSON.stringify(userObj));
     localStorage.setItem('ice_profile', JSON.stringify(profileObj));
+    
+    // Ensure profile is in qrCodeId mapping
+    const profilesByQr = JSON.parse(localStorage.getItem('ice_profiles_by_qr') || '{}');
+    profilesByQr[profileObj.qrCodeId] = profileObj;
+    localStorage.setItem('ice_profiles_by_qr', JSON.stringify(profilesByQr));
 
     return {};
   };
@@ -128,6 +133,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('ice_user', JSON.stringify(userObj));
     localStorage.setItem('ice_profile', JSON.stringify(newProfile));
     localStorage.setItem(`ice_profile_${userId}`, JSON.stringify(newProfile));
+    
+    // Store profile by qrCodeId for easy lookup
+    const profilesByQr = JSON.parse(localStorage.getItem('ice_profiles_by_qr') || '{}');
+    profilesByQr[newProfile.qrCodeId] = newProfile;
+    localStorage.setItem('ice_profiles_by_qr', JSON.stringify(profilesByQr));
 
     return {};
   };
@@ -151,6 +161,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(updatedProfile);
     localStorage.setItem('ice_profile', JSON.stringify(updatedProfile));
     localStorage.setItem(`ice_profile_${user.id}`, JSON.stringify(updatedProfile));
+    
+    // Update profile by qrCodeId mapping
+    const profilesByQr = JSON.parse(localStorage.getItem('ice_profiles_by_qr') || '{}');
+    profilesByQr[updatedProfile.qrCodeId] = updatedProfile;
+    localStorage.setItem('ice_profiles_by_qr', JSON.stringify(profilesByQr));
   };
 
   return (
