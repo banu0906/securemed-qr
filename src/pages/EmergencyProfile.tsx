@@ -212,20 +212,25 @@ export default function EmergencyProfile() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {profile.emergencyContacts.map((contact) => (
-                <div key={contact.id} className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
-                  <div>
-                    <p className="font-medium text-foreground">{contact.name}</p>
-                    <p className="text-sm text-muted-foreground">{contact.relationship}</p>
+              {profile.emergencyContacts.map((contact) => {
+                const fullPhone = contact.countryCode 
+                  ? `${contact.countryCode}${contact.phone}` 
+                  : contact.phone;
+                return (
+                  <div key={contact.id} className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
+                    <div>
+                      <p className="font-medium text-foreground">{contact.name}</p>
+                      <p className="text-sm text-muted-foreground">{contact.relationship}</p>
+                    </div>
+                    <Button variant="success" size="lg" asChild>
+                      <a href={`tel:${fullPhone}`} className="text-base font-semibold">
+                        <Phone className="h-5 w-5 mr-2" />
+                        {fullPhone}
+                      </a>
+                    </Button>
                   </div>
-                  <Button variant="success" asChild>
-                    <a href={`tel:${contact.phone}`}>
-                      <Phone className="h-4 w-4 mr-2" />
-                      {contact.phone}
-                    </a>
-                  </Button>
-                </div>
-              ))}
+                );
+              })}
             </CardContent>
           </Card>
         )}
@@ -240,23 +245,30 @@ export default function EmergencyProfile() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-foreground">{profile.doctorInfo.name}</p>
-                  <p className="text-sm text-muted-foreground">{profile.doctorInfo.specialty}</p>
-                  {profile.doctorInfo.hospital && (
-                    <p className="text-sm text-muted-foreground">{profile.doctorInfo.hospital}</p>
-                  )}
-                </div>
-                {profile.doctorInfo.phone && (
-                  <Button variant="outline" asChild>
-                    <a href={`tel:${profile.doctorInfo.phone}`}>
-                      <Phone className="h-4 w-4 mr-2" />
-                      Call
-                    </a>
-                  </Button>
-                )}
-              </div>
+              {(() => {
+                const doctorPhone = profile.doctorInfo.countryCode 
+                  ? `${profile.doctorInfo.countryCode}${profile.doctorInfo.phone}` 
+                  : profile.doctorInfo.phone;
+                return (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-foreground">{profile.doctorInfo.name}</p>
+                      <p className="text-sm text-muted-foreground">{profile.doctorInfo.specialty}</p>
+                      {profile.doctorInfo.hospital && (
+                        <p className="text-sm text-muted-foreground">{profile.doctorInfo.hospital}</p>
+                      )}
+                    </div>
+                    {doctorPhone && (
+                      <Button variant="outline" size="lg" asChild>
+                        <a href={`tel:${doctorPhone}`} className="font-semibold">
+                          <Phone className="h-5 w-5 mr-2" />
+                          {doctorPhone}
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         )}
