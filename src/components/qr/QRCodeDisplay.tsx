@@ -11,15 +11,7 @@ interface QRCodeDisplayProps {
 }
 
 export function QRCodeDisplay({ qrCodeId, patientName, size = 200, showBranding = true }: QRCodeDisplayProps) {
-  // Use deployed URL if available, otherwise use current origin
-  const getProfileUrl = () => {
-    const origin = window.location.origin;
-    // If running on localhost, still use local origin for testing
-    // In production, this will automatically use the deployed domain
-    return `${origin}/emergency/${qrCodeId}`;
-  };
-  
-  const profileUrl = getProfileUrl();
+  const profileUrl = `http://localhost:8080/emergency/${qrCodeId}`;
 
   return (
     <Card className="inline-flex flex-col items-center p-6 shadow-elevated bg-card">
