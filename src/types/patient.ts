@@ -3,6 +3,7 @@ export interface EmergencyContact {
   name: string;
   relationship: string;
   phone: string;
+  countryCode: string;
 }
 
 export interface DoctorInfo {
@@ -10,6 +11,16 @@ export interface DoctorInfo {
   specialty: string;
   phone: string;
   hospital: string;
+  countryCode?: string;
+}
+
+export interface StructuredAddress {
+  houseNumber: string;
+  street: string;
+  city: string;
+  state: string;
+  country: string;
+  zipCode: string;
 }
 
 export interface PatientProfile {
@@ -26,16 +37,19 @@ export interface PatientProfile {
   pastMedicalHistory: string;
   emergencyContacts: EmergencyContact[];
   doctorInfo: DoctorInfo;
-  address: string;
+  address: string | StructuredAddress;
   additionalNotes: string;
   qrCodeId: string;
   createdAt: Date;
   updatedAt: Date;
+  phoneNumber?: string;
+  phoneCountry?: string;
 }
 
 export interface User {
   id: string;
   email?: string;
   phone?: string;
+  phoneCountry?: string;
   createdAt: Date;
 }
