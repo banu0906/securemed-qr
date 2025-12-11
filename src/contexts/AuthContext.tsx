@@ -32,12 +32,22 @@ const createDefaultProfile = (userId: string, name: string): PatientProfile => (
     specialty: '',
     phone: '',
     hospital: '',
+    countryCode: 'IN',
   },
-  address: '',
+  address: {
+    houseNumber: '',
+    street: '',
+    city: '',
+    state: '',
+    country: '',
+    zipCode: '',
+  },
   additionalNotes: '',
   qrCodeId: generateId(),
   createdAt: new Date(),
   updatedAt: new Date(),
+  phoneNumber: '',
+  phoneCountry: 'IN',
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {

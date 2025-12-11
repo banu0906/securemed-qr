@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { EmergencyContact } from '@/types/patient';
 import { Phone, User, Trash2 } from 'lucide-react';
+import { countries } from '@/lib/validation';
 
 interface EmergencyContactCardProps {
   contact: EmergencyContact;
@@ -11,8 +12,11 @@ interface EmergencyContactCardProps {
 }
 
 export function EmergencyContactCard({ contact, onDelete, readonly = false }: EmergencyContactCardProps) {
+  const country = countries.find(c => c.code === contact.countryCode);
+  const fullPhoneNumber = country ? `${country.dialCode}${contact.phone}` : contact.phone;
+  
   const handleCall = () => {
-    window.location.href = `tel:${contact.phone}`;
+    window.location.href = `tel:${fullPhoneNumber}`;
   };
 
   return (
@@ -25,7 +29,7 @@ export function EmergencyContactCard({ contact, onDelete, readonly = false }: Em
           <div>
             <h4 className="font-medium text-foreground">{contact.name}</h4>
             <p className="text-sm text-muted-foreground">{contact.relationship}</p>
-            <p className="text-sm text-primary font-medium mt-1">{contact.phone}</p>
+            <p className="text-sm text-primary font-medium mt-1">{fullPhoneNumber}</p>
           </div>
         </div>
 

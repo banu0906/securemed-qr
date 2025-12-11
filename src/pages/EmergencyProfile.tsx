@@ -21,6 +21,7 @@ import {
   FileText,
   ExternalLink
 } from 'lucide-react';
+import { formatAddress } from '@/lib/validation';
 
 export default function EmergencyProfile() {
   const { qrCodeId } = useParams<{ qrCodeId: string }>();
@@ -285,7 +286,9 @@ export default function EmergencyProfile() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-foreground">{profile.address}</p>
+              <p className="text-sm text-foreground">
+                {typeof profile.address === 'string' ? profile.address : formatAddress(profile.address)}
+              </p>
             </CardContent>
           </Card>
         )}

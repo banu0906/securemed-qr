@@ -24,11 +24,17 @@ import {
   Phone,
   MapPin
 } from 'lucide-react';
+import { formatAddress } from '@/lib/validation';
 
 export default function Dashboard() {
   const { profile } = useAuth();
 
   if (!profile) return null;
+
+  // Format address for display
+  const displayAddress = typeof profile.address === 'string' 
+    ? profile.address 
+    : formatAddress(profile.address);
 
   const isProfileComplete = profile.name && profile.age > 0 && profile.bloodGroup;
 
@@ -285,7 +291,7 @@ export default function Dashboard() {
                         Address
                       </p>
                       <p className="text-sm text-foreground mt-1 break-words">
-                        {profile.address || 'Not specified'}
+                        {displayAddress || 'Not specified'}
                       </p>
                     </div>
                   </div>

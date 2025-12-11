@@ -24,14 +24,42 @@ import {
   FileText,
   X
 } from 'lucide-react';
-import { EmergencyContact, PatientProfile } from '@/types/patient';
+import { EmergencyContact, PatientProfile, StructuredAddress } from '@/types/patient';
+import { 
+  countries, 
+  validatePhone, 
+  validateAge, 
+  validateName, 
+  validateAddress,
+  validateEmergencyContact,
+  formatAddress
+} from '@/lib/validation';
+
 const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const;
 const genders = ['male', 'female', 'other'] as const;
+
+const defaultAddress: StructuredAddress = {
+  houseNumber: '',
+  street: '',
+  city: '',
+  state: '',
+  country: '',
+  zipCode: ''
+};
 
 export default function Profile() {
   const { profile, updateProfile } = useAuth();
   const navigate = useNavigate();
   
+  // Parse address if it's a string (legacy) or use structured address
+  const getInitialAddress = (): StructuredAddress => {
+    if (!profile?.address) return defaultAddress;
+    if (typeof profile.address === 'string') {
+      return { ...defaultAddress, street: profile.address };
+    }
+    return profile.address;
+  };
+
   const [formData, setFormData] = useState({
     name: profile?.name || '',
     age: profile?.age || 0,
@@ -42,19 +70,72 @@ export default function Profile() {
     currentMedications: profile?.currentMedications || [],
     pastMedicalHistory: profile?.pastMedicalHistory || '',
     emergencyContacts: profile?.emergencyContacts || [],
-    doctorInfo: profile?.doctorInfo || { name: '', specialty: '', phone: '', hospital: '' },
-    address: profile?.address || '',
+    doctorInfo: profile?.doctorInfo || { name: '', specialty: '', phone: '', hospital: '', countryCode: 'IN' },
+    address: getInitialAddress(),
     additionalNotes: profile?.additionalNotes || '',
+    phoneNumber: profile?.phoneNumber || '',
+    phoneCountry: profile?.phoneCountry || 'IN',
   });
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [newCondition, setNewCondition] = useState('');
   const [newAllergy, setNewAllergy] = useState('');
   const [newMedication, setNewMedication] = useState('');
   const [showContactForm, setShowContactForm] = useState(false);
-  const [newContact, setNewContact] = useState({ name: '', relationship: '', phone: '' });
+  const [newContact, setNewContact] = useState({ name: '', relationship: '', phone: '', countryCode: 'IN' });
+  const [contactError, setContactError] = useState('');
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    // Validate name
+    const nameValidation = validateName(formData.name);
+    if (!nameValidation.valid) {
+      newErrors.name = nameValidation.message;
+    }
+
+    // Validate age
+    if (formData.age > 0) {
+      const ageValidation = validateAge(formData.age);
+      if (!ageValidation.valid) {
+        newErrors.age = ageValidation.message;
+      }
+    }
+
+    // Validate phone if provided
+    if (formData.phoneNumber) {
+      const phoneValidation = validatePhone(formData.phoneNumber, formData.phoneCountry);
+      if (!phoneValidation.valid) {
+        newErrors.phoneNumber = phoneValidation.message;
+      }
+    }
+
+    // Validate address
+    const addressErrors = validateAddress(formData.address);
+    Object.keys(addressErrors).forEach(key => {
+      newErrors[`address.${key}`] = addressErrors[key];
+    });
+
+    // Validate doctor phone if provided
+    if (formData.doctorInfo.phone && formData.doctorInfo.countryCode) {
+      const doctorPhoneValidation = validatePhone(formData.doctorInfo.phone, formData.doctorInfo.countryCode);
+      if (!doctorPhoneValidation.valid) {
+        newErrors.doctorPhone = doctorPhoneValidation.message;
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      toast.error('Please fix the errors before saving');
+      return;
+    }
+
     updateProfile({
       ...formData,
       bloodGroup: formData.bloodGroup as PatientProfile['bloodGroup'],
@@ -81,18 +162,34 @@ export default function Profile() {
   };
 
   const addContact = () => {
-    if (newContact.name && newContact.phone) {
-      const contact: EmergencyContact = {
-        id: Math.random().toString(36).substring(2),
-        ...newContact
-      };
-      setFormData(prev => ({
-        ...prev,
-        emergencyContacts: [...prev.emergencyContacts, contact]
-      }));
-      setNewContact({ name: '', relationship: '', phone: '' });
-      setShowContactForm(false);
+    if (!newContact.name.trim()) {
+      setContactError('Name is required');
+      return;
     }
+    
+    const validation = validateEmergencyContact(
+      newContact.phone, 
+      newContact.countryCode,
+      formData.phoneNumber,
+      formData.phoneCountry
+    );
+    
+    if (!validation.valid) {
+      setContactError(validation.message);
+      return;
+    }
+
+    const contact: EmergencyContact = {
+      id: Math.random().toString(36).substring(2),
+      ...newContact
+    };
+    setFormData(prev => ({
+      ...prev,
+      emergencyContacts: [...prev.emergencyContacts, contact]
+    }));
+    setNewContact({ name: '', relationship: '', phone: '', countryCode: 'IN' });
+    setShowContactForm(false);
+    setContactError('');
   };
 
   const removeContact = (id: string) => {
@@ -100,6 +197,21 @@ export default function Profile() {
       ...prev,
       emergencyContacts: prev.emergencyContacts.filter(c => c.id !== id)
     }));
+  };
+
+  const updateAddress = (field: keyof StructuredAddress, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      address: { ...prev.address, [field]: value }
+    }));
+    // Clear error when user types
+    if (errors[`address.${field}`]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[`address.${field}`];
+        return newErrors;
+      });
+    }
   };
 
   if (!profile) return null;
@@ -134,25 +246,35 @@ export default function Profile() {
             <CardContent className="space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
+                  <Label htmlFor="name">Full Name *</Label>
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) => {
+                      setFormData(prev => ({ ...prev, name: e.target.value }));
+                      if (errors.name) setErrors(prev => ({ ...prev, name: '' }));
+                    }}
                     placeholder="John Doe"
+                    className={errors.name ? 'border-destructive' : ''}
                   />
+                  {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="age">Age</Label>
+                  <Label htmlFor="age">Age *</Label>
                   <Input
                     id="age"
                     type="number"
-                    min="0"
-                    max="150"
+                    min="1"
+                    max="120"
                     value={formData.age || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, age: parseInt(e.target.value) || 0 }))}
+                    onChange={(e) => {
+                      setFormData(prev => ({ ...prev, age: parseInt(e.target.value) || 0 }));
+                      if (errors.age) setErrors(prev => ({ ...prev, age: '' }));
+                    }}
                     placeholder="25"
+                    className={errors.age ? 'border-destructive' : ''}
                   />
+                  {errors.age && <p className="text-xs text-destructive">{errors.age}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="gender">Gender</Label>
@@ -188,6 +310,39 @@ export default function Profile() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              {/* Phone Number with Country */}
+              <div className="space-y-2">
+                <Label>Phone Number</Label>
+                <div className="flex gap-2">
+                  <Select
+                    value={formData.phoneCountry}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, phoneCountry: value }))}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map((country) => (
+                        <SelectItem key={country.code} value={country.code}>
+                          {country.name} ({country.dialCode})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    value={formData.phoneNumber}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^\d]/g, '');
+                      setFormData(prev => ({ ...prev, phoneNumber: value }));
+                      if (errors.phoneNumber) setErrors(prev => ({ ...prev, phoneNumber: '' }));
+                    }}
+                    placeholder="Phone number"
+                    className={`flex-1 ${errors.phoneNumber ? 'border-destructive' : ''}`}
+                  />
+                </div>
+                {errors.phoneNumber && <p className="text-xs text-destructive">{errors.phoneNumber}</p>}
               </div>
             </CardContent>
           </Card>
@@ -323,28 +478,60 @@ export default function Profile() {
               {showContactForm ? (
                 <Card className="p-4 border-dashed">
                   <div className="space-y-3">
-                    <div className="grid sm:grid-cols-3 gap-3">
+                    <div className="grid sm:grid-cols-2 gap-3">
                       <Input
                         value={newContact.name}
-                        onChange={(e) => setNewContact(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="Name"
+                        onChange={(e) => {
+                          setNewContact(prev => ({ ...prev, name: e.target.value }));
+                          setContactError('');
+                        }}
+                        placeholder="Name *"
                       />
                       <Input
                         value={newContact.relationship}
                         onChange={(e) => setNewContact(prev => ({ ...prev, relationship: e.target.value }))}
                         placeholder="Relationship"
                       />
+                    </div>
+                    <div className="flex gap-2">
+                      <Select
+                        value={newContact.countryCode}
+                        onValueChange={(value) => {
+                          setNewContact(prev => ({ ...prev, countryCode: value }));
+                          setContactError('');
+                        }}
+                      >
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Country" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {countries.map((country) => (
+                            <SelectItem key={country.code} value={country.code}>
+                              {country.name} ({country.dialCode})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <Input
                         value={newContact.phone}
-                        onChange={(e) => setNewContact(prev => ({ ...prev, phone: e.target.value }))}
-                        placeholder="Phone number"
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^\d]/g, '');
+                          setNewContact(prev => ({ ...prev, phone: value }));
+                          setContactError('');
+                        }}
+                        placeholder="Phone number *"
+                        className="flex-1"
                       />
                     </div>
+                    {contactError && <p className="text-xs text-destructive">{contactError}</p>}
                     <div className="flex gap-2">
                       <Button type="button" variant="default" size="sm" onClick={addContact}>
                         Add Contact
                       </Button>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => setShowContactForm(false)}>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => {
+                        setShowContactForm(false);
+                        setContactError('');
+                      }}>
                         Cancel
                       </Button>
                     </div>
@@ -392,18 +579,44 @@ export default function Profile() {
                     placeholder="General Physician"
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 sm:col-span-2">
                   <Label>Phone</Label>
-                  <Input
-                    value={formData.doctorInfo.phone}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      doctorInfo: { ...prev.doctorInfo, phone: e.target.value }
-                    }))}
-                    placeholder="+1 (555) 123-4567"
-                  />
+                  <div className="flex gap-2">
+                    <Select
+                      value={formData.doctorInfo.countryCode || 'IN'}
+                      onValueChange={(value) => setFormData(prev => ({
+                        ...prev,
+                        doctorInfo: { ...prev.doctorInfo, countryCode: value }
+                      }))}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Country" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {countries.map((country) => (
+                          <SelectItem key={country.code} value={country.code}>
+                            {country.name} ({country.dialCode})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      value={formData.doctorInfo.phone}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^\d]/g, '');
+                        setFormData(prev => ({
+                          ...prev,
+                          doctorInfo: { ...prev.doctorInfo, phone: value }
+                        }));
+                        if (errors.doctorPhone) setErrors(prev => ({ ...prev, doctorPhone: '' }));
+                      }}
+                      placeholder="Phone number"
+                      className={`flex-1 ${errors.doctorPhone ? 'border-destructive' : ''}`}
+                    />
+                  </div>
+                  {errors.doctorPhone && <p className="text-xs text-destructive">{errors.doctorPhone}</p>}
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 sm:col-span-2">
                   <Label>Hospital/Clinic</Label>
                   <Input
                     value={formData.doctorInfo.hospital}
@@ -427,13 +640,78 @@ export default function Profile() {
               </CardTitle>
               <CardDescription>Your home address</CardDescription>
             </CardHeader>
-            <CardContent>
-              <Textarea
-                value={formData.address}
-                onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                placeholder="123 Main St, Apt 4B, New York, NY 10001"
-                rows={2}
-              />
+            <CardContent className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>House/Flat Number *</Label>
+                  <Input
+                    value={formData.address.houseNumber}
+                    onChange={(e) => updateAddress('houseNumber', e.target.value)}
+                    placeholder="123, Apt 4B"
+                    className={errors['address.houseNumber'] ? 'border-destructive' : ''}
+                  />
+                  {errors['address.houseNumber'] && <p className="text-xs text-destructive">{errors['address.houseNumber']}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label>Street/Area *</Label>
+                  <Input
+                    value={formData.address.street}
+                    onChange={(e) => updateAddress('street', e.target.value)}
+                    placeholder="Main Street, Downtown"
+                    className={errors['address.street'] ? 'border-destructive' : ''}
+                  />
+                  {errors['address.street'] && <p className="text-xs text-destructive">{errors['address.street']}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label>City *</Label>
+                  <Input
+                    value={formData.address.city}
+                    onChange={(e) => updateAddress('city', e.target.value)}
+                    placeholder="New York"
+                    className={errors['address.city'] ? 'border-destructive' : ''}
+                  />
+                  {errors['address.city'] && <p className="text-xs text-destructive">{errors['address.city']}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label>State/Province *</Label>
+                  <Input
+                    value={formData.address.state}
+                    onChange={(e) => updateAddress('state', e.target.value)}
+                    placeholder="NY"
+                    className={errors['address.state'] ? 'border-destructive' : ''}
+                  />
+                  {errors['address.state'] && <p className="text-xs text-destructive">{errors['address.state']}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label>Country *</Label>
+                  <Select
+                    value={formData.address.country}
+                    onValueChange={(value) => updateAddress('country', value)}
+                  >
+                    <SelectTrigger className={errors['address.country'] ? 'border-destructive' : ''}>
+                      <SelectValue placeholder="Select country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map((country) => (
+                        <SelectItem key={country.code} value={country.code}>
+                          {country.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors['address.country'] && <p className="text-xs text-destructive">{errors['address.country']}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label>ZIP/Postal Code *</Label>
+                  <Input
+                    value={formData.address.zipCode}
+                    onChange={(e) => updateAddress('zipCode', e.target.value)}
+                    placeholder="10001"
+                    className={errors['address.zipCode'] ? 'border-destructive' : ''}
+                  />
+                  {errors['address.zipCode'] && <p className="text-xs text-destructive">{errors['address.zipCode']}</p>}
+                </div>
+              </div>
             </CardContent>
           </Card>
 
