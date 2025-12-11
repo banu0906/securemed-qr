@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { InfoCard } from '@/components/profile/InfoCard';
 import { TagList } from '@/components/profile/TagList';
 import { PatientProfile } from '@/types/patient';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   HeartPulseIcon, 
   BloodDropIcon, 
@@ -19,20 +20,32 @@ import {
   AlertTriangle,
   Pill,
   FileText,
-  ExternalLink
+  ArrowLeft
 } from 'lucide-react';
 import { formatAddress } from '@/lib/validation';
 
 export default function EmergencyProfile() {
   const { qrCodeId } = useParams<{ qrCodeId: string }>();
+  const navigate = useNavigate();
+  const { user, profile: authProfile } = useAuth();
   const [profile, setProfile] = useState<PatientProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [isOwnProfile, setIsOwnProfile] = useState(false);
 
   useEffect(() => {
     const findProfile = () => {
       if (!qrCodeId) {
         setNotFound(true);
+        setIsLoading(false);
+        return;
+      }
+
+      // First check: If logged in user's profile matches the qrCodeId
+      if (authProfile && authProfile.qrCodeId === qrCodeId) {
+        console.log('Found profile via authProfile (logged in user)');
+        setProfile(authProfile);
+        setIsOwnProfile(true);
         setIsLoading(false);
         return;
       }
@@ -126,13 +139,9 @@ export default function EmergencyProfile() {
       setIsLoading(false);
     };
 
-    // Small delay to ensure localStorage is populated (especially when opening in new tab)
-    const timer = setTimeout(() => {
-      findProfile();
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [qrCodeId]);
+    // Run immediately since we're navigating in same tab now
+    findProfile();
+  }, [qrCodeId, authProfile]);
 
   if (isLoading) {
     return (
@@ -185,6 +194,14 @@ export default function EmergencyProfile() {
       </header>
 
       <main className="container py-6 space-y-6">
+        {/* Back Button - only show if viewing own profile */}
+        {isOwnProfile && (
+          <Button variant="ghost" onClick={() => navigate('/qr-code')} className="animate-fade-in">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to QR Code
+          </Button>
+        )}
+
         {/* Patient Name Banner */}
         <Card className="shadow-elevated bg-card border-primary/20 animate-slide-up">
           <CardContent className="py-6">
