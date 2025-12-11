@@ -61,8 +61,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const savedProfile = localStorage.getItem('ice_profile');
     
     if (savedUser && savedProfile) {
-      setUser(JSON.parse(savedUser));
-      setProfile(JSON.parse(savedProfile));
+      const userObj = JSON.parse(savedUser);
+      const profileObj = JSON.parse(savedProfile);
+      setUser(userObj);
+      setProfile(profileObj);
+      
+      // Ensure profile is in qrCodeId mapping (migration for existing profiles)
+      const profilesByQr = JSON.parse(localStorage.getItem('ice_profiles_by_qr') || '{}');
+      if (!profilesByQr[profileObj.qrCodeId]) {
+        profilesByQr[profileObj.qrCodeId] = profileObj;
+        localStorage.setItem('ice_profiles_by_qr', JSON.stringify(profilesByQr));
+      }
     }
     setIsLoading(false);
   }, []);
